@@ -120,18 +120,6 @@ Answer these in your submission README (≤150 words each). There's no single ri
 
 ---
 
-## How we'll evaluate
-
-| Area | What we look for |
-|---|---|
-| **It works end-to-end** | All 25 emails run through without manual fixes. The audit log is complete. |
-| **Accuracy and edge cases** | Correct intent, correct action, sensible handling of tricky emails. |
-| **LLM and agent design** | Reliable structured output, grounded answers, sensible tool design and prompts. |
-| **Integrations** | Jira, Slack and Google Sheets working together cleanly, with no duplicates. |
-| **Product thinking** | Clear, honest reasoning on trade-offs, cost, risk and what not to automate. |
-| **Documentation and communication** | Someone else could run and maintain your flow from your README. Clear walkthrough video. |
-| **Ownership** | How you handle questions, changes and the things that didn't work. |
-
 **Honesty is scored.** A clear "this part doesn't work yet, here's why, here's what I'd try" earns more than hiding a failure.
 
 ---
