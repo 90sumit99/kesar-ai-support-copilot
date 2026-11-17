@@ -38,7 +38,8 @@ You choose the model(s). Mention them and your settings (temperature, etc.) in y
 
 Treat this file as a **read-only order API**.
 
-- **Easiest:** open `data/orders.json` in the GitHub web UI → click **Raw** → copy the URL. Call it with an HTTP GET request and filter the result by `order_id` or `customer_email` inside your workflow.
+- **Easiest:** call this URL with an HTTP GET request, then filter the result by `order_id` or `customer_email` inside your workflow:
+  https://raw.githubusercontent.com/abhishek-patel-cadient/kesar-ai-copilot-assignment/refs/heads/main/data/orders.json
 - **Alternatives:** import the orders into a Google Sheet or Airtable, or serve the file locally (e.g., `npx json-server data/orders.json`). Any approach is fine if your `get_order` tool behaves like an API lookup.
 
 Field reference (each order):
@@ -61,7 +62,10 @@ Field reference (each order):
 
 ## 4. FAQ knowledge — `data/faq.md`
 
-Your `search_faq` tool can be as simple or as sophisticated as you like: fetch the raw file and pass the relevant section (or all of it) to the agent, split it by headings, or put it in a vector store. Explain your choice. The key requirement is that answers stay **grounded** in this file.
+Your `search_faq` tool can be as simple or as sophisticated as you like: fetch the file and pass the relevant section (or all of it) to the agent, split it by headings, or put it in a vector store. Explain your choice. The key requirement is that answers stay **grounded** in this file.
+
+- FAQ: https://raw.githubusercontent.com/abhishek-patel-cadient/kesar-ai-copilot-assignment/refs/heads/main/data/faq.md
+- Brand voice (for the reply-drafting prompt): https://raw.githubusercontent.com/abhishek-patel-cadient/kesar-ai-copilot-assignment/refs/heads/main/data/brand_voice.md
 
 ---
 
@@ -95,7 +99,8 @@ python scripts/send_test_emails.py --url <YOUR_WEBHOOK_URL> --dry-run       # pr
 
 Each POST body is one email object exactly as in `data/test_emails.json`.
 
-**B. Loop inside your workflow:** fetch `data/test_emails.json` (raw URL) and iterate over `emails[]`.
+**B. Loop inside your workflow:** fetch this URL and iterate over `emails[]`:
+https://raw.githubusercontent.com/abhishek-patel-cadient/kesar-ai-copilot-assignment/refs/heads/main/data/test_emails.json
 
 Either is fine. Keep a **delay between emails** so you don't hit free-tier rate limits on your LLM.
 
