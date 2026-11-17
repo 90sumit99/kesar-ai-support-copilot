@@ -12,7 +12,9 @@ Before measuring accuracy, write down your own expected outcome for each email (
 
 ## 2. Results per email
 
-Fill one row per email. "Expected" is your own judgment. For "Action", describe what the flow did (e.g., *draft reply*, *Jira KS-12 + Slack*, *needs human*, *log only*).
+Fill one row per email. "Expected" is your own judgment. For "Action", describe what the flow did (e.g., *draft reply*, *ticket TKT-004*, *needs human*, *log only*).
+
+v2 (your final version) must cover all 25 emails. v1 needs at least 10. Put `—` in the v1 columns for emails you didn't run in v1.
 
 | Email | Expected intent | Expected action | v1 intent | v1 action | v1 ✅/❌ | v2 intent | v2 action | v2 ✅/❌ | Notes |
 |---|---|---|---|---|---|---|---|---|---|
@@ -44,11 +46,14 @@ Fill one row per email. "Expected" is your own judgment. For "Action", describe 
 
 ## 3. Summary
 
+*n* = the number of emails you ran in that version (at least 10 for v1, 25 for v2).
+
 | Metric | Prompt v1 | Prompt v2 |
 |---|---|---|
-| Intent accuracy (x / 25) | | |
-| Correct action (x / 25) | | |
-| Valid JSON on first try (x / 25) | | |
+| Emails run (*n*) | | 25 |
+| Intent accuracy (x / *n*) | | |
+| Correct action (x / *n*) | | |
+| Valid JSON on first try (x / *n*) | | |
 | Emails sent to "needs human" | | |
 | Avg. tokens per email (if tracked) | | |
 | Est. cost per email (₹ or $) | | |

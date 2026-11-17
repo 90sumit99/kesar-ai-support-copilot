@@ -10,10 +10,12 @@ Everything in this assignment can be done at **zero cost**. Free-tier limits cha
 
 | Option | How to get it | Notes |
 |---|---|---|
-| **n8n — self-hosted (recommended)** | Docker: `docker run -it --rm --name n8n -p 5678:5678 -v n8n_data:/home/node/.n8n docker.n8n.io/n8nio/n8n` · or Node: `npx n8n` · then open http://localhost:5678 | Free, no limits, has a built-in **AI Agent** node with tool support. Docs: https://docs.n8n.io |
-| **n8n Cloud** | Free trial at https://n8n.io | Public webhook URLs out of the box. Mind the trial length vs. your deadline. |
+| **n8n Cloud (easiest)** | Free trial at https://n8n.io | Nothing to install. Google sign-in for Sheets is one click, and webhook URLs are public out of the box. Check the trial lasts past your deadline, and past the live round if you're shortlisted. |
+| **n8n — self-hosted** | Docker: `docker run -it --rm --name n8n -p 5678:5678 -v n8n_data:/home/node/.n8n docker.n8n.io/n8nio/n8n` · or Node: `npx n8n` · then open http://localhost:5678 | Free, no limits. Connecting Google Sheets needs your own Google Cloud OAuth client (see §5). |
 | **Make** | Free plan at https://www.make.com | Watch the monthly operations limit. Running 25 emails × several steps × 2 prompt versions adds up. |
 | **Zapier** | Free plan at https://zapier.com | Free-plan limits on multi-step workflows may restrict you. Check before committing. |
+
+Both n8n options have a built-in **AI Agent** node with tool support. Docs: https://docs.n8n.io
 
 **Public URLs:** if an external service ever needs to call *into* your workflow (e.g., a webhook from another tool), a locally hosted instance needs a public URL. Use n8n Cloud or a tunnel such as `ngrok` or `cloudflared`.
 
@@ -63,38 +65,22 @@ Your `search_faq` tool can be as simple or as sophisticated as you like: fetch t
 
 ---
 
-## 5. Jira (free)
+## 5. Google Sheets (audit log + tickets)
 
-1. Create a free Jira site at https://www.atlassian.com/software/jira/free (free for up to 10 users).
-2. Create a project named **Kesar Support** with key **`KS`**. A team-managed Kanban project is fine.
-3. Create an API token: https://id.atlassian.com/manage-profile/security/api-tokens
-4. Authenticate with **Basic auth**: your Atlassian account email + the API token. Your API base URL is `https://<your-site>.atlassian.net`.
-5. REST API docs: https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/
-6. n8n, Make and Zapier all have Jira integrations. You may use those or raw HTTP requests.
-
-Tip: issue search uses **JQL** (Jira Query Language), which is useful for finding existing issues before creating new ones.
-
----
-
-## 6. Slack (free)
-
-1. Create a free Slack workspace (or use a personal one you own) and a channel named **`#support-escalations`**.
-2. Either:
-   - create a Slack app with an **Incoming Webhook** for that channel: https://api.slack.com/messaging/webhooks, **or**
-   - create a Slack app with a bot token (`chat:write` scope) and use your platform's Slack integration.
-
----
-
-## 7. Google Sheets (audit log)
-
-1. Create a Google Sheet named **Kesar Support Audit Log**.
-2. Import [`templates/audit_log_template.csv`](../templates/audit_log_template.csv) (File → Import) to get the column headers.
-3. You may add columns, but keep the existing ones.
+1. Create a Google Sheet named **Kesar Support** with two tabs. Use File → Import → "Insert new sheet(s)" to bring in each template's column headers:
+   - **Audit Log**: from [`templates/audit_log_template.csv`](../templates/audit_log_template.csv). One row per email.
+   - **Tickets**: from [`templates/tickets_template.csv`](../templates/tickets_template.csv). One row per return/refund or complaint. This is your simple ticketing system:
+     - `ticket_id`: any unique ID, e.g. `TKT-001`
+     - `status`: e.g. `Open` or `Closed`; add others if you need them
+     - `email_ids`: every email linked to this ticket
+     - `notes`: updates added over time
+2. You may add columns, but keep the existing ones.
+3. **Connecting from n8n:** on n8n Cloud, use **Sign in with Google**. On self-hosted n8n you need a Google Cloud OAuth client. Follow https://docs.n8n.io/integrations/builtin/credentials/google/ (about 15–20 minutes).
 4. Before submitting, set sharing to **"Anyone with the link can view"**.
 
 ---
 
-## 8. Running the 25 test emails
+## 6. Running the 25 test emails
 
 You can trigger your flow in either of two ways:
 
@@ -111,4 +97,19 @@ Each POST body is one email object exactly as in `data/test_emails.json`.
 
 **B. Loop inside your workflow:** fetch `data/test_emails.json` (raw URL) and iterate over `emails[]`.
 
-Either is fine. Keep a **delay between emails** so you don't hit free-tier rate limits on your LLM or Jira.
+Either is fine. Keep a **delay between emails** so you don't hit free-tier rate limits on your LLM.
+
+---
+
+## 7. Tips and common sticking points
+
+- **Start with 3–4 emails, not all 25.** For example: `python scripts/send_test_emails.py --url <URL> --only E01,E02,E03`.
+- **Getting valid JSON every time.** Keep the classification temperature at or near 0. In n8n, you can attach a **Structured Output Parser** (paste in the schema) to the LLM node, and wrap it in an **Auto-fixing Output Parser**, which asks the model to repair invalid output. Add a simple fallback for when it still fails, for example `intent: "other"` plus needs human.
+- **Don't make the LLM do date maths or arithmetic.** Work out "days since delivery" from the email's `received_at` and the order's `delivered_date` in your workflow, then give the result to the LLM. In n8n, an expression like this works:
+  `{{ Math.floor(DateTime.fromISO($json.received_at).diff(DateTime.fromISO($json.delivered_date), 'days').days) }}`
+  A few lines in a Code node work too.
+- **Agent tools.** Attach tools to the AI Agent node, for example an HTTP Request tool that fetches `orders.json`, or a Code tool. Give each tool a clear name and description. The agent chooses tools based on those descriptions.
+- **Enforce hard rules in workflow logic, not only in prompts.** Rules about privacy, eligibility and not inventing data are safer as IF or Code checks, because a model can be talked out of them. Use the prompt for tone and wording.
+- **Avoiding duplicate tickets.** Before adding a ticket, look in the Tickets tab for a row with the same `order_id` whose status isn't `Closed`. If you find one, update that row instead: add the new email ID to `email_ids` and append a note. In n8n, the Google Sheets node's **Get Row(s)** operation can filter on a column value, and **Update Row** changes an existing row.
+- **Rate limits and flaky APIs.** Keep a few seconds between emails. In n8n, turn on **Retry On Fail** in the settings of your LLM and API nodes.
+- **Exporting without secrets.** If your keys are stored as credentials (not typed into node fields), a normal n8n export won't contain them. Search the file anyway before you commit it.

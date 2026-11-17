@@ -33,7 +33,7 @@ Paste your final prompts (classification + agent/system prompt). Mention model s
 ## 5. Key decisions and assumptions
 
 - How I handle low-confidence classifications:
-- How I avoid duplicate Jira issues:
+- How I avoid duplicate tickets:
 - How I make sure order details only go to the right customer:
 - How I keep answers grounded in the FAQ:
 - Other assumptions:
@@ -50,14 +50,10 @@ What would break first, and what would you change? (rate limits, cost, queueing,
 4. **Failure experience:** When the copilot gets it wrong, what does the customer experience, and how do you limit the damage?
 5. **Don't automate:** Name one thing in this flow that should stay manual, and why.
 
-## 8. Change requests
-
-Describe any change requests you received during the assignment, how you handled them, and what you changed.
-
-## 9. How I used AI tools
+## 8. How I used AI tools
 
 Which AI tools you used while building (e.g., to write prompts, debug, generate code) and where you relied on your own judgment instead.
 
-## 10. If I had one more week
+## 9. If I had one more week
 
 -

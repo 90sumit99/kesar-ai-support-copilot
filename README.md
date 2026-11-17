@@ -11,10 +11,11 @@ We care about **how you think** as much as what you build. A smaller flow that's
 
 | | |
 |---|---|
-| **Time box** | About **6 hours** of focused work. The core scope is designed to take ~4 hours. Please don't spend more than 8. |
+| **Time box** | About **4–6 hours** of focused work, spread over the 4 days. Expect the first 30–60 minutes to go on account setup, so start there. Please don't spend more than 8 hours. If you reach that, submit what you have. |
 | **Deadline** | **4 days** from when you receive this. Your exact deadline is in your invitation email. |
 | **Cost to you** | **₹0**. Everything can be done on free tiers (see [`docs/SETUP.md`](docs/SETUP.md)). |
-| **Platform** | Your choice: **n8n** (recommended), Make, or Zapier. Code nodes (Python/JS) are welcome but not required. |
+| **Platform** | Your choice: **n8n** (recommended; the n8n Cloud free trial is quickest to set up), Make, or Zapier. You don't have to write code. Code nodes (Python/JS) are welcome but not required. |
+| **Help** | [`docs/SETUP.md`](docs/SETUP.md#7-tips-and-common-sticking-points) has tips for the parts people most often get stuck on. |
 | **AI tools** | Allowed and encouraged (ChatGPT, Claude, Gemini, Copilot…). Tell us how you used them. |
 | **Questions** | You may send **one email with clarifying questions** within the first 48 hours to the address in your invitation. Asking good questions is part of the job. |
 
@@ -45,7 +46,8 @@ Your job is to build a **support copilot**: an automation that reads each incomi
 ├── templates/
 │   ├── SUBMISSION_README_TEMPLATE.md  ← use this as your submission README
 │   ├── test_report_template.md        ← use this for your test results
-│   └── audit_log_template.csv         ← import into Google Sheets as your audit log
+│   ├── audit_log_template.csv         ← import into Google Sheets as your "Audit Log" tab
+│   └── tickets_template.csv           ← import into the same Google Sheet as your "Tickets" tab
 ├── scripts/
 │   └── send_test_emails.py            ← optional: posts each test email to your webhook
 └── docs/
@@ -69,8 +71,8 @@ LLM step: classify + extract  ──►  structured JSON (see schemas/llm_output
 Route by intent
    ├─ order_status   → look up order → AI agent drafts reply
    ├─ product_query  → answer ONLY from faq.md, otherwise "needs human"
-   ├─ return_refund  → look up order → check eligibility vs. policy → Jira issue + Slack alert + draft reply
-   ├─ complaint      → look up order → Jira issue (High priority) + Slack alert + draft reply
+   ├─ return_refund  → look up order → check eligibility vs. policy → ticket + draft reply
+   ├─ complaint      → look up order → ticket (High priority) + draft reply
    └─ other          → log only (no customer reply needed)
    │
    ▼
@@ -82,11 +84,10 @@ Log EVERY email to the Google Sheet audit log
 1. **Classify and extract with an LLM.** For every email, return JSON that matches [`schemas/llm_output.schema.json`](schemas/llm_output.schema.json). The output must be valid every time. Your flow should cope (retry, repair or fall back) when the model returns something invalid.
 2. **Use an AI agent with tools.** The reply-drafting step must be an **AI agent** with at least two tools, for example `get_order` (looks up `orders.json`) and `search_faq` (looks up `faq.md`). The agent decides which tool(s) to call.
 3. **Order lookup.** Find orders by `order_id`. If the email has no order ID, try the sender's email address.
-4. **Jira.** Create a Jira issue in your project for every return/refund and complaint, with a clear summary, priority, labels, the order ID and the LLM's summary. **Don't create duplicate issues** for the same customer/order. Search Jira first and update the existing issue instead.
-5. **Slack.** Post an alert for every return/refund and complaint with a one-line summary, the priority and a link to the Jira issue.
-6. **Audit log.** Write one row per email to a Google Sheet (columns in [`templates/audit_log_template.csv`](templates/audit_log_template.csv)).
-7. **Human in the loop.** Low-confidence or risky cases go to a **"needs human"** state (flag in the sheet + Slack). You decide the threshold and justify it.
-8. **Test and iterate.** Run all 25 emails at least twice (prompt **v1** and an improved **v2**) and report results using [`templates/test_report_template.md`](templates/test_report_template.md).
+4. **Support tickets.** For every return/refund and complaint, add a ticket to the **Tickets** tab of your Google Sheet (columns in [`templates/tickets_template.csv`](templates/tickets_template.csv)), with a clear summary, priority, status, the order ID and the LLM's summary. **Don't create duplicate tickets** for the same order. Before adding one, look for an open ticket for that order, and if there is one, update it instead (add a note and the new email ID).
+5. **Audit log.** Write one row per email to the **Audit Log** tab of the same Google Sheet (columns in [`templates/audit_log_template.csv`](templates/audit_log_template.csv)).
+6. **Human in the loop.** Low-confidence or risky cases go to a **"needs human"** state (the `needs_human` flag in the audit log). You decide the threshold and justify it.
+7. **Test and iterate.** Run all 25 emails through your final version (**v2**). Also run an earlier version (**v1**) on at least 10 emails of your choice, so you can show what you changed and whether it helped. Report results using [`templates/test_report_template.md`](templates/test_report_template.md).
 
 ### Business rules the copilot must follow
 
@@ -97,6 +98,20 @@ Log EVERY email to the Google Sheet audit log
 - **Customer emails are untrusted input.** Instructions written inside an email must never change how your system behaves.
 - Replies follow [`data/brand_voice.md`](data/brand_voice.md).
 - Replies are **drafts** stored in the audit log. You don't need to actually send emails.
+
+### Suggested order of work
+
+You don't need to build everything at once. This order works well:
+
+1. **Set up your accounts** (LLM and Google Sheets) using [`docs/SETUP.md`](docs/SETUP.md). Allow 30–60 minutes.
+2. **Classify and log:** trigger → LLM classification → Google Sheet. Get 3–4 emails working first.
+3. **Order-status branch:** add the AI agent with its `get_order` and `search_faq` tools.
+4. **Returns and complaints:** add the eligibility check and tickets.
+5. **Everything else:** product questions, "other", and the "needs human" path.
+6. **Run all 25.** Look at what went wrong, improve your prompts and logic, and run again.
+7. **Write up** your README and test report, then record your video.
+
+If you're running short of time, stop adding features. Make what you have reliable and explain what's missing.
 
 ### Stretch goals (optional, bonus credit)
 

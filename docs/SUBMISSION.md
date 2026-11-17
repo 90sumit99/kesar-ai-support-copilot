@@ -18,22 +18,21 @@ your-submission/
 ├── code/                     ← (optional) any code nodes or scripts
 └── screenshots/
     ├── workflow.png          ← full workflow canvas
-    ├── jira_board.png        ← your KS project with the issues created
-    ├── slack_channel.png     ← #support-escalations with alerts
-    └── audit_log.png         ← the Google Sheet with all 25 rows
+    ├── tickets.png           ← the Tickets tab with the tickets created
+    └── audit_log.png         ← the Audit Log tab with all 25 rows
 ```
 
 ## Checklist
 
 - [ ] **Workflow export** (n8n JSON / Make blueprint / Zapier export) in `workflow/`
 - [ ] **No API keys or tokens** anywhere in the repo (search your export for `key`, `token`, `secret`, `Bearer`, `sk-`)
-- [ ] **Google Sheet link** (view access) in your README, showing all 25 emails processed
-- [ ] **Screenshots** of the Jira board, Slack channel, audit log and workflow
-- [ ] **TEST_REPORT.md** with v1 vs. v2 results and the failures you couldn't fix
+- [ ] **Google Sheet link** (view access) in your README, showing all 25 emails processed and the tickets created
+- [ ] **Screenshots** of the Tickets tab, audit log and workflow
+- [ ] **TEST_REPORT.md** with v2 results for all 25 emails, your v1 comparison (at least 10 emails), and the failures you couldn't fix
 - [ ] **README.md** with setup steps, architecture, decisions, scaling notes and the **5 product-thinking answers**
 - [ ] **5-minute screen recording** (Loom, Google Drive or YouTube unlisted), linked in your README. Show:
   - your workflow and a quick tour of its main branches
-  - at least **three emails running end-to-end**, including one that creates a Jira issue and Slack alert
+  - at least **three emails running end-to-end**, including one that creates a ticket
   - one thing that **doesn't** work well yet, and why
 - [ ] A short note in your README on **how you used AI tools**
 
@@ -47,4 +46,4 @@ Reply to your invitation email with:
 
 ## After you submit
 
-We review every submission against the criteria in the main [README](../README.md#how-well-evaluate). Shortlisted candidates are invited to a **live session (about 60 minutes)** to walk us through the build and make a small change to it live. Please keep your workflow, Jira site and Slack workspace running until you hear back from us.
+We review every submission against the requirements in the main [README](../README.md). Shortlisted candidates are invited to a **live session (about 60 minutes)** to walk us through the build and make a small change to it live. Please keep your workflow and Google Sheet running until you hear back from us.
