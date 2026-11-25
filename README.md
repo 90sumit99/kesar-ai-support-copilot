@@ -230,16 +230,4 @@ node scripts/build-report.cjs
 
 Raw responses are written to `test-results/`, which is intentionally ignored and must not be uploaded. Review generated drafts against `tests/expectations.json`.
 
-### Upload safely to GitHub
 
-```bash
-git add .
-git diff --cached --check
-git status
-git commit -m "Complete Kesar AI support copilot assignment"
-git branch -M main
-git remote set-url origin https://github.com/90sumit99/kesar-ai-support-copilot.git
-git push -u origin main
-```
-
-Before pushing, verify that `.local`, `.runtime`, `test-results`, logs, API keys and OAuth secrets are not staged.
