@@ -10,13 +10,13 @@ An n8n workflow classifies fictional support emails, uses a tool-calling AI agen
 - Live validation: v2 webhook completed all 25 supplied scenarios; local tests pass 21/21.
 - Implemented: workflow exports, classifier validation/retry/fallback, two agent tools, sender verification, return rules, ticket upserts, audit upserts, serial test runner and local safety tests.
 - Completed: Google Sheets OAuth connection, live v2 execution evidence, generated test report and final workflow exports.
-- Google Sheet: private runtime dependency; create or connect your own sheet using docs/CONNECTIONS.md.
+- Google Sheet: the live test sheet is linked below; reviewers can use a copy with their own credentials.
 - Recording: required by the assignment; add the final Loom, Google Drive or unlisted YouTube URL below.
 
 ## Submission links
 
 - Google Sheet (set sharing to **Anyone with the link → Viewer** before submitting): [Kesar Support](https://docs.google.com/spreadsheets/d/1zUSz8ByY4TbmuB8wdD0WlueOytx-d1vybZA09dz85Yk/edit)
-- Screen recording: **add your Loom, Google Drive or unlisted YouTube link here before submission**.
+- Screen recording: pending upload. Add the public or reviewer-accessible recording URL before submission.
 - Screenshots required by the brief: `workflow.png`, `tickets.png` and `audit_log.png` in `screenshots/`.
 
 The original assignment is preserved in docs/ASSIGNMENT.md.
@@ -126,7 +126,7 @@ git --version
 ### Clone and install local n8n
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git
+git clone https://github.com/90sumit99/kesar-ai-support-copilot.git
 cd kesar-support-copilot
 mkdir -p .runtime
 npm install --prefix .runtime n8n@2.49.5 --no-audit --no-fund
@@ -238,8 +238,8 @@ git diff --cached --check
 git status
 git commit -m "Complete Kesar AI support copilot assignment"
 git branch -M main
-git remote set-url origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git
+git remote set-url origin https://github.com/90sumit99/kesar-ai-support-copilot.git
 git push -u origin main
 ```
 
-Replace the placeholders with the real repository URL. Before pushing, verify that `.local`, `.runtime`, `test-results`, logs, API keys and OAuth secrets are not staged.
+Before pushing, verify that `.local`, `.runtime`, `test-results`, logs, API keys and OAuth secrets are not staged.

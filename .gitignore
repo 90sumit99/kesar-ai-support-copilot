@@ -21,3 +21,4 @@ test-results/
 
 # Local evidence and runtime logs
 n8n-*.log
+PROJECT_HANDOVER.md
