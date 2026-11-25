@@ -1,0 +1,11 @@
+{
+  "name": "kesar-support-copilot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "n8n order-support copilot for the fictional Kesar & Co. assignment",
+  "scripts": {
+    "build": "node scripts/build-workflows.cjs",
+    "test": "node --test tests/*.test.cjs"
+  },
+  "engines": { "node": ">=24" }
+}

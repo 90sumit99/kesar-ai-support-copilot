@@ -1,158 +1,245 @@
-# AI Automation Intern — Take-home Assignment
-## Build an AI Order-Support Copilot for "Kesar & Co."
+# Kesar & Co. Support Copilot — Sumit
 
-Thanks for your interest in the **AI Automation Intern** role. This assignment is a small, realistic version of the work you'd do with us: designing an automation that uses an LLM, connects real tools, behaves safely, and is documented well enough that someone else could run it.
+> Completed submission package. Credentials remain outside the repository; workflow exports use credential references only.
 
-We care about **how you think** as much as what you build. A smaller flow that's reliable, honest about its limits, and well-reasoned beats a large flow that half-works.
+## 1. Summary
 
----
+An n8n workflow classifies fictional support emails, uses a tool-calling AI agent to draft grounded replies, checks privacy and policy rules in JavaScript, and writes tickets plus an audit log to Google Sheets. It never sends emails or performs refunds.
 
-## At a glance
+- Platform: n8n 2.49.5; configured model: Gemini 3.5 Flash-Lite, temperature 0.
+- Live validation: v2 webhook completed all 25 supplied scenarios; local tests pass 21/21.
+- Implemented: workflow exports, classifier validation/retry/fallback, two agent tools, sender verification, return rules, ticket upserts, audit upserts, serial test runner and local safety tests.
+- Completed: Google Sheets OAuth connection, live v2 execution evidence, generated test report and final workflow exports.
+- Google Sheet: private runtime dependency; create or connect your own sheet using docs/CONNECTIONS.md.
+- Recording: required by the assignment; add the final Loom, Google Drive or unlisted YouTube URL below.
 
-| | |
-|---|---|
-| **Time box** | About **4–6 hours** of focused work, spread over the 4 days. Expect the first 30–60 minutes to go on account setup, so start there. Please don't spend more than 8 hours. If you reach that, submit what you have. |
-| **Deadline** | **4 days** from when you receive this. Your exact deadline is in your invitation email. |
-| **Cost to you** | **₹0**. Everything can be done on free tiers (see [`docs/SETUP.md`](docs/SETUP.md)). |
-| **Platform** | Your choice: **n8n** (recommended; the n8n Cloud free trial is quickest to set up), Make, or Zapier. You don't have to write code. Code nodes (Python/JS) are welcome but not required. |
-| **Help** | [`docs/SETUP.md`](docs/SETUP.md#7-tips-and-common-sticking-points) has tips for the parts people most often get stuck on. |
-| **AI tools** | Allowed and encouraged (ChatGPT, Claude, Gemini, Copilot…). Tell us how you used them. |
-| **Questions** | You may send **one email with clarifying questions** within the first 48 hours to the address in your invitation. Asking good questions is part of the job. |
+## Submission links
 
----
+- Google Sheet (set sharing to **Anyone with the link → Viewer** before submitting): [Kesar Support](https://docs.google.com/spreadsheets/d/1zUSz8ByY4TbmuB8wdD0WlueOytx-d1vybZA09dz85Yk/edit)
+- Screen recording: **add your Loom, Google Drive or unlisted YouTube link here before submission**.
+- Screenshots required by the brief: `workflow.png`, `tickets.png` and `audit_log.png` in `screenshots/`.
 
-## The scenario
+The original assignment is preserved in docs/ASSIGNMENT.md.
 
-**Kesar & Co.** is a fictional D2C Ayurvedic skincare brand that sells on Shopify across India. It receives about **60 support emails a day**, and one person answers all of them by hand. Most are repetitive ("where's my order?"), some need policy decisions (returns, refunds), and a few are risky (angry customers, privacy issues, odd requests).
+## 2. Architecture
 
-Your job is to build a **support copilot**: an automation that reads each incoming email, understands what the customer needs, looks up their order, and either **drafts a reply** or **routes the issue to the right person**, with a human approving anything risky.
+Webhook → normalize email → LLM classification → validate JSON → retry/fallback if needed → deterministic safety assessment → tool-using drafting agent or log-only route → guard draft → read/update tickets → write audit row → return result.
 
-> **Scenario date:** treat **20 November 2026** as "today". Use each email's `received_at` timestamp for any date logic (delivery windows, return eligibility), **not** your computer's clock.
+| Step | Behavior | Reason |
+|---|---|---|
+| Classification | Seven schema fields, one repair attempt, valid low-confidence fallback | Bad model output must not break intake silently |
+| get_order tool | Exact ID lookup, otherwise sender email; ownership check before returning data | The model cannot choose another customer's identity |
+| search_faq tool | Returns the complete supplied short FAQ | Keeps exceptions and product facts together without unnecessary retrieval infrastructure |
+| Policy checks | IST date calculations, separate damage reporting window, unopened/kit/COD rules | Arithmetic and hard rules belong in code |
+| Draft guard | Validates agent JSON/tool use, denies third-party requests, blocks unsupported links and obvious approval claims | Reduces unsafe drafts while retaining human review |
+| Tickets | Open ticket lookup, preserve High priority, append unique email IDs | Follow-ups reuse the customer's existing ticket |
+| Audit | Upsert by email_id using RAW cell values | One row per email; safe retries; no spreadsheet formulas from customer text |
 
----
+The workflow exports are in `workflow/`; live execution evidence is summarized in `TEST_REPORT.md`.
 
-## What's in this repo
+## 3. Setup
 
+Follow docs/CONNECTIONS.md. You need an n8n instance, Gemini API credential and Google Sheets connection. Use only the supplied fictional data.
+
+1. Install local n8n with `npm install --prefix .runtime n8n@2.49.5 --no-audit --no-fund`, or use n8n Cloud.
+2. For local execution run `powershell -ExecutionPolicy Bypass -File scripts/start-n8n.ps1`.
+3. Import the two JSON workflow exports, select the Gemini/Sheets credentials and set the spreadsheet ID on all Sheets nodes.
+4. Import the CSV headers into tabs named Audit Log and Tickets.
+5. Publish v1 and run `python scripts/run-suite.py --url http://localhost:5678/webhook/kesar-support-v1 --version v1`.
+6. Preserve baseline evidence, publish v2, then run the same command using v2 in the URL and version argument. Review all 25 drafts and actions against tests/expectations.json.
+7. Run `npm test` for local logic tests. Run `npm run build` after editing source code/prompts to regenerate workflow exports.
+
+Never commit credentials. Local runtime, credential storage, screenshots and raw test results are gitignored. The checked-in report contains sanitized summary evidence.
+
+## 4. Prompts
+
+The exact prompts are in prompts/classifier-v1.md, prompts/classifier-v2.md and prompts/agent.md, and embedded in the exports. The initial setting is Gemini 3.5 Flash-Lite at temperature 0; update this section if the actual model changes. Model temperature does not make outputs fully deterministic. The agent has at most five iterations and only read-only tools.
+
+## 5. Key decisions and assumptions
+
+- Confidence below 0.85 requires review. This is an initial heuristic, not a calibrated probability. Risk flags override high confidence. Returns/refunds and complaints always require a person.
+- Ticket deduplication matches an open ticket for a verified order and sender. Unverified requests cannot join somebody else's ticket; their order_id is left blank. Unknown-order requests from the same sender may share a manual-triage ticket, which is a documented limitation.
+- Dates use email received_at in IST. Standard returns use calendar-day differences; the exact 48-hour damage boundary is escalated when date-only delivery data cannot establish it.
+- Photos listed as attachments have not been examined. Replacements/refunds need human verification.
+- The provided data is snapshotted into the export to make imports reproducible. Edit data files and rebuild to refresh it.
+- E13 is other + human triage because invoice policy is absent. E17 is other/log-only under the brief even though the FAQ has a partnership contact.
+- E08 and E23 use complaint as primary intent and return_refund as secondary. Both needs remain represented.
+- Draft guard checks are defense in depth, not a proof of semantic correctness. A human should review drafts before sending.
+
+## 6. Scaling to 1,000 emails/day
+
+The demo serializes processing to avoid Google Sheets read/update races. For production, use a queue, a transactional database with a unique open-ticket constraint and an idempotency key per email, and a separate reporting sync to Sheets. Introduce provider-aware backoff, a dead-letter queue, bounded retry budgets, alerts and privacy-aware retention. A real email connector must provide trusted sender metadata; a public anonymous webhook is not identity authentication. Restrict and authenticate that connector before using real data.
+
+## 7. Product-thinking questions
+
+### Auto-send vs. draft
+
+This build stores drafts only. After a reviewed pilot, I would consider auto-sending straightforward order-status and FAQ replies with verified ownership, supported source facts and confidence at least 0.95. The current threshold of 0.85 only distinguishes normal drafts from human-triage drafts. Returns, complaints, medical questions, identity mismatches, unsupported requests and injections always stay with people regardless of score. I would calibrate thresholds against a labeled validation set rather than trusting the model's self-reported confidence.
+
+### Cost
+
+Illustrative paid-tier estimate, not measured usage: assume 8,000 input tokens and 1,000 output tokens per email across classification and agent calls, including tool context. At Gemini 3.5 Flash-Lite's listed $0.30/M input and $2.50/M output, cost = (8,000 × 0.30 + 1,000 × 2.50)/1,000,000 = $0.0049/email. At 1,000/day for 30 days: $147/month; a 20% retry margin gives $176.40. This excludes hosting/taxes and depends on actual thinking/output tokens and tool iterations. Free-tier testing may cost zero within available quota. Source: https://aistudio.google.com/docs/pricing#gemini-3.5-flash-lite (checked 24 November 2026). Replace assumptions with measured token totals after the live run.
+
+### Success metric
+
+Week-one metric: the share of support drafts a human accepts without a factual, policy or privacy correction. This measures useful work saved while avoiding a misleading count of generated replies. Track the numerator and denominator, sample escalations for missed automation opportunities, and separately treat any privacy disclosure or unauthorized financial approval as a stop condition. If either occurs, disable automated drafting for that route, keep intake/logging and investigate before re-enabling it.
+
+### Failure experience
+
+The customer receives nothing automatically. A failed classifier produces a valid fallback and a human-review flag; a failed agent produces a cautious handoff draft. If Google Sheets fails, n8n marks the execution failed and the test runner reports it rather than claiming success. The operator fixes the integration and retries the email; stable IDs avoid ordinary replay duplicates. In production, a monitored queue and human inbox would make sure failed cases do not disappear. These failure paths still need live integration verification.
+
+### Don't automate
+
+Final approval of refunds, replacements and policy exceptions should remain manual. The dataset cannot verify photos, physical item condition, packing records or exact delivery times. A model should prepare the facts and draft; a support person should approve the remedy. The workflow has no payment or fulfillment write tools.
+
+## 8. How I used AI tools
+
+OpenAI Codex assisted with interpreting the brief, writing workflow-generation code, prompts, safety tests, test expectations and documentation. The candidate reviewed the workflow, connected the credentials, ran the live v2 suite and should understand the privacy gate, date rules, agent tools and deduplication before the live interview.
+
+## 9. If I had one more week
+
+Add transactional ticket storage and queueing, calibrated evaluation across a larger set of emails, attachment review tooling, automatic usage accounting, stronger source-claim validation, and better observability for failed integrations. Keep financial and medical decisions manual.
+
+## 10. Complete setup and reviewer runbook
+
+The following is a clean-machine runbook. It keeps credentials outside Git and lets a reviewer rebuild the workflow exports.
+
+### Prerequisites
+
+- Node.js 24 or newer
+- Python 3.10 or newer
+- Git
+- A Google account
+- A Gemini API key
+- An n8n instance (local or Cloud)
+- A Google Sheet with `Audit Log` and `Tickets` tabs
+
+Check versions:
+
+```bash
+node --version
+npm --version
+python --version
+git --version
 ```
-.
-├── README.md                          ← you are here (the brief)
-├── data/
-│   ├── orders.json                    ← mock order database (your "order API")
-│   ├── faq.md                         ← policies + product info: the ONLY source of truth
-│   ├── brand_voice.md                 ← how replies should sound
-│   └── test_emails.json               ← 25 customer emails to process
-├── schemas/
-│   └── llm_output.schema.json         ← required structure for the LLM classification output
-├── templates/
-│   ├── SUBMISSION_README_TEMPLATE.md  ← use this as your submission README
-│   ├── test_report_template.md        ← use this for your test results
-│   ├── audit_log_template.csv         ← import into Google Sheets as your "Audit Log" tab
-│   └── tickets_template.csv           ← import into the same Google Sheet as your "Tickets" tab
-├── scripts/
-│   └── send_test_emails.py            ← optional: posts each test email to your webhook
-└── docs/
-    ├── SETUP.md                       ← free-tier setup for every tool
-    └── SUBMISSION.md                  ← exactly what to submit and how
+
+### Clone and install local n8n
+
+```bash
+git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git
+cd kesar-support-copilot
+mkdir -p .runtime
+npm install --prefix .runtime n8n@2.49.5 --no-audit --no-fund
 ```
 
----
+On Windows PowerShell, the equivalent is:
 
-## What to build
-
-### Flow overview
-
-```
-Trigger: webhook (or loop over data/test_emails.json)
-   │
-   ▼
-LLM step: classify + extract  ──►  structured JSON (see schemas/llm_output.schema.json)
-   │
-   ▼
-Route by intent
-   ├─ order_status   → look up order → AI agent drafts reply
-   ├─ product_query  → answer ONLY from faq.md, otherwise "needs human"
-   ├─ return_refund  → look up order → check eligibility vs. policy → ticket + draft reply
-   ├─ complaint      → look up order → ticket (High priority) + draft reply
-   └─ other          → log only (no customer reply needed)
-   │
-   ▼
-Log EVERY email to the Google Sheet audit log
+```powershell
+New-Item -ItemType Directory -Force .runtime | Out-Null
+npm install --prefix .runtime n8n@2.49.5 --no-audit --no-fund
 ```
 
-### Core requirements (must have)
+n8n is installed locally in `.runtime/node_modules/n8n`, not globally. Private n8n data and encrypted credentials are stored in `.local/.n8n`; both directories are ignored by Git.
 
-1. **Classify and extract with an LLM.** For every email, return JSON that matches [`schemas/llm_output.schema.json`](schemas/llm_output.schema.json). The output must be valid every time. Your flow should cope (retry, repair or fall back) when the model returns something invalid.
-2. **Use an AI agent with tools.** The reply-drafting step must be an **AI agent** with at least two tools, for example `get_order` (looks up `orders.json`) and `search_faq` (looks up `faq.md`). The agent decides which tool(s) to call.
-3. **Order lookup.** Find orders by `order_id`. If the email has no order ID, try the sender's email address.
-4. **Support tickets.** For every return/refund and complaint, add a ticket to the **Tickets** tab of your Google Sheet (columns in [`templates/tickets_template.csv`](templates/tickets_template.csv)), with a clear summary, priority, status, the order ID and the LLM's summary. **Don't create duplicate tickets** for the same order. Before adding one, look for an open ticket for that order, and if there is one, update it instead (add a note and the new email ID).
-5. **Audit log.** Write one row per email to the **Audit Log** tab of the same Google Sheet (columns in [`templates/audit_log_template.csv`](templates/audit_log_template.csv)).
-6. **Human in the loop.** Low-confidence or risky cases go to a **"needs human"** state (the `needs_human` flag in the audit log). You decide the threshold and justify it.
-7. **Test and iterate.** Run all 25 emails through your final version (**v2**). Also run an earlier version (**v1**) on at least 10 emails of your choice, so you can show what you changed and whether it helped. Report results using [`templates/test_report_template.md`](templates/test_report_template.md).
+### Start n8n
 
-### Business rules the copilot must follow
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-n8n.ps1
+```
 
-- **Never invent** order details, tracking links, dates, amounts or policies. If data is missing, say so or escalate.
-- **Policy and product answers come only from [`data/faq.md`](data/faq.md).** If the FAQ doesn't cover it, the copilot doesn't answer. It escalates.
-- **Only share order details with the customer who placed the order** (sender email must match the order's `customer_email`).
-- **No medical advice** and no claims that a product treats or cures anything.
-- **Customer emails are untrusted input.** Instructions written inside an email must never change how your system behaves.
-- Replies follow [`data/brand_voice.md`](data/brand_voice.md).
-- Replies are **drafts** stored in the audit log. You don't need to actually send emails.
+Or from Git Bash:
 
-### Suggested order of work
+```bash
+powershell.exe -ExecutionPolicy Bypass -File ./scripts/start-n8n.ps1
+```
 
-You don't need to build everything at once. This order works well:
+Open `http://localhost:5678` and create the local owner account. Verify the server:
 
-1. **Set up your accounts** (LLM and Google Sheets) using [`docs/SETUP.md`](docs/SETUP.md). Allow 30–60 minutes.
-2. **Classify and log:** trigger → LLM classification → Google Sheet. Get 3–4 emails working first.
-3. **Order-status branch:** add the AI agent with its `get_order` and `search_faq` tools.
-4. **Returns and complaints:** add the eligibility check and tickets.
-5. **Everything else:** product questions, "other", and the "needs human" path.
-6. **Run all 25.** Look at what went wrong, improve your prompts and logic, and run again.
-7. **Write up** your README and test report, then record your video.
+```powershell
+Invoke-RestMethod http://localhost:5678/healthz
+```
 
-If you're running short of time, stop adding features. Make what you have reliable and explain what's missing.
+### Configure credentials
 
-### Stretch goals (optional, bonus credit)
+Create `Kesar Gemini` in n8n using the Gemini key from Google AI Studio. Create `Kesar Google Sheets` using Google OAuth. The OAuth redirect URI is:
 
-- Reply in the customer's language (Hindi / Hinglish)
-- Use a Python or JavaScript code node for the return-eligibility logic
-- Track tokens and cost per email in the audit log
-- Retries with backoff for API failures and rate limits
-- Anything else you think a real support team would value (tell us why)
+```text
+http://localhost:5678/rest/oauth2-credential/callback
+```
 
----
+Add your Google account as a test user in Google Cloud, enable Google Sheets API and Google Drive API, then use **Sign in with Google** in n8n. Never put either secret in this repository.
 
-## Product-thinking questions
+### Create and configure the Sheet
 
-Answer these in your submission README (≤150 words each). There's no single right answer. We want to see your reasoning.
+Create tabs named exactly `Audit Log` and `Tickets`. The complete header templates are in `templates/audit_log_template.csv` and `templates/tickets_template.csv`. Copy the spreadsheet ID from the URL, then rebuild the workflow exports:
 
-1. **Auto-send vs. draft:** Which replies would you let go out automatically, and which need a human? Where would you set the confidence threshold, and why?
-2. **Cost:** Estimate the LLM cost per email and per month at 1,000 emails/day. Show your maths.
-3. **Success metric:** What's the one metric you'd track in week 1 to know this is working? What would make you switch it off?
-4. **Failure experience:** When the copilot gets it wrong, what does the customer experience, and how do you limit the damage?
-5. **Don't automate:** Name one thing in this flow that should stay manual, and why.
+PowerShell:
 
----
+```powershell
+$env:KESAR_SHEET_ID = "YOUR_GOOGLE_SHEET_ID"
+npm run build
+```
 
-**Honesty is scored.** A clear "this part doesn't work yet, here's why, here's what I'd try" earns more than hiding a failure.
+Git Bash:
 
----
+```bash
+export KESAR_SHEET_ID="YOUR_GOOGLE_SHEET_ID"
+npm run build
+```
 
-## Rules
+### Import and publish workflows
 
-- This must be **your own work**. AI assistants are fine; other people are not.
-- Use **only the provided fictional data**. Don't connect real customer data or real stores.
-- **Never commit API keys or tokens.** Check your workflow export before submitting.
-- If you get stuck, **submit what you have** with honest notes on what's missing. Partial, well-explained submissions are reviewed seriously.
-- Shortlisted candidates will do a **live session** where they walk through and extend their build.
+Import `workflow/kesar-support-v1.json` and `workflow/kesar-support-v2.json` in n8n. Select the `Kesar Gemini` credential on the three model nodes and `Kesar Google Sheets` on all Sheets nodes. Publish the workflow before calling its production webhook.
 
----
+For a local CLI import:
 
-## Next steps
+```powershell
+$env:N8N_USER_FOLDER = (Join-Path (Get-Location).Path ".local")
+$env:N8N_DIAGNOSTICS_ENABLED = "false"
+node .runtime\node_modules\n8n\bin\n8n import:workflow --separate --input=workflow
+```
 
-1. Set up your tools → [`docs/SETUP.md`](docs/SETUP.md)
-2. Build, test, iterate
-3. Submit → [`docs/SUBMISSION.md`](docs/SUBMISSION.md)
+### Run tests
 
-Good luck, and have fun with it.
+```bash
+npm test
+npm run build
+npm test
+```
+
+`npm test` runs 21 deterministic safety and workflow tests. It does not consume Gemini quota.
+
+### Test one live webhook request
+
+The required input shape is `id`, `from.email`, `subject`, `body`, and ISO-8601 `received_at`:
+
+```powershell
+$payload = @{id="demo-001"; from=@{name="Demo User";email="demo-user@example.com"}; subject="Where is my order?"; body="Hi, I placed order KC-1001 yesterday."; received_at=(Get-Date).ToUniversalTime().ToString("o")} | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/kesar-support-v2" -ContentType "application/json" -Body $payload
+```
+
+The workflow returns a draft and audit result; it does not send email.
+
+### Run the complete supplied suite
+
+```bash
+python scripts/run-suite.py --url http://localhost:5678/webhook/kesar-support-v1 --version v1 --delay 0.5
+python scripts/run-suite.py --url http://localhost:5678/webhook/kesar-support-v2 --version v2 --delay 0.5
+node scripts/build-report.cjs
+```
+
+Raw responses are written to `test-results/`, which is intentionally ignored and must not be uploaded. Review generated drafts against `tests/expectations.json`.
+
+### Upload safely to GitHub
+
+```bash
+git add .
+git diff --cached --check
+git status
+git commit -m "Complete Kesar AI support copilot assignment"
+git branch -M main
+git remote set-url origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git
+git push -u origin main
+```
+
+Replace the placeholders with the real repository URL. Before pushing, verify that `.local`, `.runtime`, `test-results`, logs, API keys and OAuth secrets are not staged.

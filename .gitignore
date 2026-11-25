@@ -14,3 +14,10 @@ Thumbs.db
 __pycache__/
 *.pyc
 node_modules/
+.runtime/
+.local/
+*.log
+test-results/
+
+# Local evidence and runtime logs
+n8n-*.log
