@@ -16,7 +16,7 @@ An n8n workflow classifies fictional support emails, uses a tool-calling AI agen
 ## Submission links
 
 - Google Sheet (set sharing to **Anyone with the link → Viewer** before submitting): [Kesar Support](https://docs.google.com/spreadsheets/d/1zUSz8ByY4TbmuB8wdD0WlueOytx-d1vybZA09dz85Yk/edit)
-- Screen recording: pending upload. Add the public or reviewer-accessible recording URL before submission.
+- Screen recording: [Watch the project demonstration](https://drive.google.com/file/d/17IYH8uOm8-3weTQb_1BSkfc-2JZuKila/view?usp=sharing).
 - Screenshots required by the brief: `workflow.png`, `tickets.png` and `audit_log.png` in `screenshots/`.
 
 The original assignment is preserved in docs/ASSIGNMENT.md.
